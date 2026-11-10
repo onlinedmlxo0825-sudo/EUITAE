@@ -1,0 +1,32 @@
+# ── 프로젝트 생성물: 스크립트로 다시 만들 수 있고, 공개 저장소에 올리면 안 되는 내용이 있다 ──
+# 00_sheets  클립별 장면 미리보기(얼굴이 나옴)
+# 01_asr     받아쓰기·16kHz 음성(대화 내용, 약 126MB)
+# 03_capcut  CapCut 스테이징·SRT·타임라인(대화 내용, 로컬 경로)·프로젝트 목록 백업
+# 04_preview 확인용 미리보기 영상·프레임
+*/00_sheets/
+*/01_asr/
+*/03_capcut/
+*/04_preview/
+*/03_build_log.txt
+
+# _template  CapCut 템플릿으로 쓰는 v004 프로젝트 사본(자막 = 대화 내용, 로컬 경로)
+_template/
+
+# ── 미디어 파일은 어디에 있든 올리지 않는다 ──
+*.mp4
+*.MP4
+*.mov
+*.wav
+*.mp3
+*.jpg
+*.jpeg
+*.png
+*.srt
+
+# ── 지금은 없지만 생기면 제외 ──
+output/
+tmp/
+
+# ── Python ──
+__pycache__/
+*.pyc
