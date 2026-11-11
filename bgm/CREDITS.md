@@ -4,7 +4,8 @@
 
 | 파일 | 곡 / 만든 사람 | 페이지 | 쓰는 곳(v010) |
 |---|---|---|---|
-| `gym_active-sport_kulakovka.mp3` | Active Sport / Kulakovka | https://pixabay.com/music/electronic-active-sport-618585/ | 운동 앞부분(부스터~케이블 하이로우) |
+| `gym_gym-phonk_kulakovka.mp3` | Gym Phonk / Kulakovka | https://pixabay.com/music/phonk-gym-phonk-620567/ | 운동 앞부분(부스터~케이블 하이로우), v011부터 |
+| `gym_active-sport_kulakovka.mp3` | Active Sport / Kulakovka | https://pixabay.com/music/electronic-active-sport-618585/ | v010에서만 사용. "뽕짝 느낌"이라 v011에서 뺐다 |
 | `gym_workout_kulakovka.mp3` | Workout / Kulakovka | https://pixabay.com/music/action-workout-620537/ | 운동 뒷부분(원암 시티드 로우~인버티드 로우) |
 | `lunch_happy-ukulele_bombinsound.mp3` | Happy Ukulele / BombinSound | https://pixabay.com/music/happy-childrens-tunes-happy-ukulele-512480/ | 점심 칼국수 |
 | `fish_beach-days_lab_cat.mp3` | Beach Days / lab_cat | https://pixabay.com/music/lofi-beach-days-587915/ | 낚시 1차전 |

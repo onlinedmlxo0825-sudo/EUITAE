@@ -2,8 +2,8 @@
 
 **유튜브 채널 「의태」 브이로그 녹화본을 Whisper로 받아쓰고 Claude Code가 장면을 골라, 자막·강조 글자·효과음·배경음악까지 들어간 CapCut 초벌 프로젝트로 만드는 작업 저장소.**
 
-![draft](https://img.shields.io/badge/draft_v010-final_review-brightgreen)
-![next](https://img.shields.io/badge/next-종목_글자_모양_결정-yellow)
+![draft](https://img.shields.io/badge/draft_v011-final_review-brightgreen)
+![next](https://img.shields.io/badge/next-사용자_최종_확인-yellow)
 ![rules](https://img.shields.io/badge/내_규칙-25줄-orange)
 ![python](https://img.shields.io/badge/Python-3.12-blue)
 ![whisper](https://img.shields.io/badge/Whisper-large--v3--turbo-blueviolet)
@@ -44,7 +44,8 @@ flowchart LR
 | v008 | 하이라이트 끝 장면 교체, 제목 글자 삭제, 속마음 하늘색 자막, 0~5:50 수정, 배경음악 | ✅ 완료 |
 | v009 | CapCut이 클립 시작 위치를 0초로 바꾸던 문제 수정(클립마다 재료를 따로 만듦) | ✅ 완료 |
 | **v010** | 마지막 피드백 전체: 자막 박스, 종목 글자 새 모양, 장면 전환 5곳, 배경음악 장면별 배치와 페이드, 설명·속마음 글자 → CapCut 등록(12:40) | ✅ 완료 |
-| 검토 | 종목 글자 새 모양 결정, 자막 표기는 사용자가 CapCut에서 직접 손질 | 🔄 대기 |
+| **v011** | 종목 글자 주황빛 빨강 박스, 자막 박스 더 진하게·크기 0.40, 첫 운동 곡 Gym Phonk | ✅ 조립 완료 |
+| 검토 | 자막 표기는 사용자가 CapCut에서 직접 손질 | 🔄 대기 |
 | 최종 점검 | 내보낸 영상을 스킬 `verify_render.py`로 점검 | ⏳ 예정 |
 
 ## 폴더 구조
@@ -72,7 +73,7 @@ flowchart LR
 ├─ assets/                        🔒 하이라이트 띠 PNG, 감성돔 사진(git 제외)
 ├─ _template/capcut_v004/         🔒 조립에 쓰는 CapCut 템플릿(git 제외)
 └─ 1108_낚시_등운동_브이로그/          프로젝트 1개 = 폴더 1개
-   ├─ 02_plan/plan_v00N.json      ✏️ 편집 계획: 구간·자막·강조 글자·효과음·배경음악(v001~v010)
+   ├─ 02_plan/plan_v00N.json      ✏️ 편집 계획: 구간·자막·강조 글자·효과음·배경음악(v001~v011)
    ├─ 00_sheets/                  🔒 생성물: 장면 미리보기(git 제외)
    ├─ 01_asr/                     🔒 생성물: 받아쓰기·음성(git 제외)
    ├─ 03_capcut/                  🔒 생성물: CapCut 스테이징·SRT·타임라인·목록 백업(git 제외)
@@ -96,8 +97,8 @@ flowchart LR
 | 구성 | 첫 30초 하이라이트(낚시 → 운동 중 힘든 장면 → 가장 웃긴 장면) → 3초 검은 화면 → 본편(운동 → 낚시) → "오늘은 끝" |
 | 비율 | 다음 영상부터 낚시:운동 = 7:3(적어도 6:4) |
 | 운동 | 종목당 1~3세트, 의태 세트를 더 많이. 개수는 앞 1~5개와 마지막 3~5개만. 반응 대사 앞에는 그 동작을 넣는다 |
-| 자막 | 흰 글씨 + 반투명 검은 박스, 배율 0.45, 26자 이하, 조금 아래(y −0.82) |
-| 화면 글자 | 운동 종목 = 흰 글씨 + 둥근 박스(시안), 상황 설명 = 노란 검은고딕, 의태 속마음 = 하늘색, 작은 설명 = 물건 옆 |
+| 자막 | 흰 글씨 + 진한 검은 박스(0.85), 배율 0.40, 26자 이하, 조금 아래(y −0.82) |
+| 화면 글자 | 운동 종목 = 흰 글씨 + 주황빛 빨강 둥근 박스, 상황 설명 = 노란 검은고딕, 의태 속마음 = 하늘색, 작은 설명 = 물건 옆 |
 | 장면 전환 | 장소가 바뀔 때 검은 화면 페이드 약 2.5초, 배경음악도 점점 작아지고 점점 커짐 |
 | 금지 | 채널 이름이나 제목 글자, 노래 부르는 배경음악, 강조 글자마다 '뽀잉' 소리, 검은고딕에 없는 글자(…, ·, →) |
 | 소리 | 합성 효과음 1분에 약 1.5개. 배경음악은 Pixabay의 Content ID 없는 곡(운동 스포츠 비트, 밥 우쿨렐레, 낚시 로파이, 라면 힙합) |
@@ -121,10 +122,10 @@ flowchart LR
 python -I scripts\asr_all.py "$HOME\.claude\skills\smartdaddy-video-edit\scripts" "D:\녹화본" ".\1108_낚시_등운동_브이로그\01_asr" large-v3-turbo
 
 # 조립만(SOP-03) → 03_capcut 에 스테이징
-python -I scripts\vlog_build.py "$HOME\.claude\skills\smartdaddy-video-edit\scripts" ".\1108_낚시_등운동_브이로그\02_plan\plan_v010.json"
+python -I scripts\vlog_build.py "$HOME\.claude\skills\smartdaddy-video-edit\scripts" ".\1108_낚시_등운동_브이로그\02_plan\plan_v011.json"
 
 # CapCut 등록(CapCut을 완전히 끈 뒤)
-python -I scripts\vlog_build.py "$HOME\.claude\skills\smartdaddy-video-edit\scripts" ".\1108_낚시_등운동_브이로그\02_plan\plan_v010.json" --install
+python -I scripts\vlog_build.py "$HOME\.claude\skills\smartdaddy-video-edit\scripts" ".\1108_낚시_등운동_브이로그\02_plan\plan_v011.json" --install
 
 # 효과음·하이라이트 띠 다시 만들기
 python -I scripts\make_vlog_sfx.py "$HOME\.claude\skills\smartdaddy-video-edit\scripts" ".\sfx"
