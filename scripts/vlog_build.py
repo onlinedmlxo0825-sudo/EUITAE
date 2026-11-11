@@ -108,6 +108,9 @@ for i, s in enumerate(P['segments']):
     if f not in scales:
         scales[f] = CB.cover_scale(info, cv) if info['width'] >= info['height'] else 1.0
     st_us, en_us = C.us(t), C.us(t + (src_out - src_in))
+    # one material per clip, like CapCut itself: when many clips share one material, CapCut splits it on open
+    # and resets some clips' source start to 0 (seen in v008: 10 GoPro clips played from the file start)
+    b.mats.pop((f.resolve().as_posix(), 'video'), None)
     vs = b.put_video('메인', f, st_us, en_us - st_us, C.us(src_in), scales[f], float(s.get('vol', 1.0)))
     if is_photo:
         b.mats[(f.resolve().as_posix(), 'video')][0].update(type='photo', duration=10800000000, has_audio=False)
@@ -139,7 +142,8 @@ for i, s in enumerate(P['segments']):
         cat = (seg_end - cd) if s.get('cap_end') else t + float(s.get('cap_offset', 0.2))
         P.setdefault('texts', []).append(dict(at=round(cat, 3), dur=cd, text=s['caption'], x=s.get('cap_x', 0.5),
                                               y=s.get('cap_y', 0.12), size=s.get('cap_size', 1.0),
-                                              scale=P.get('cap_scale')))
+                                              scale=s.get('cap_scale', P.get('cap_scale')),
+                                              style=P.get('cap_styles', {}).get(s.get('cap_kind', ''))))
         if s.get('cap_sfx'):          # sound on the caption's first frame
             sfx_all.append(dict(at=cat, name=s['cap_sfx'], db=float(s.get('cap_sfx_db', -20)), label=s['caption']))
     for x in s.get('sfx') or []:      # {"name": "ding", "at": seconds into this clip | "src": source seconds, "db": -20}
@@ -151,10 +155,27 @@ for i, s in enumerate(P['segments']):
     t = seg_end
 total = t
 
+def text_mat(seg):
+    return next(x for x in D['materials']['texts'] if x['id'] == seg['material_id'])
+
+
+def apply_box(m, box):
+    """Rectangle behind the text (CapCut text background). box = {"color": "#000000", "alpha": 0.55, "radius": 0.2}"""
+    m.update(background_style=1, background_color=box.get('color', '#000000'),
+             background_alpha=float(box.get('alpha', 0.55)), background_round_radius=float(box.get('radius', 0.0)),
+             background_width=float(box.get('pad_x', 0.14)), background_height=float(box.get('pad_y', 0.14)),
+             background_horizontal_offset=0.0, background_vertical_offset=0.0,
+             check_flag=m.get('check_flag', 7) | 16)
+
+
 for c0, c1, txt in cues_all:
     seg = b.put_text('자막', txt, C.us(c0), C.us(c1) - C.us(c0))
     if sub_scale:
         seg.setdefault('clip', {})['scale'] = dict(x=sub_scale, y=sub_scale)
+    if P.get('sub_y') is not None:    # vertical position, CapCut transform units (-1 = bottom edge)
+        seg.setdefault('clip', {}).setdefault('transform', {'x': 0.0, 'y': 0.0})['y'] = float(P['sub_y'])
+    if P.get('sub_box'):
+        apply_box(text_mat(seg), P['sub_box'])
 
 def hexcol(rgb):
     return '#' + ''.join(f'{round(v * 255):02X}' for v in rgb)
@@ -187,7 +208,10 @@ for o in P.get('texts', []):
     if o.get('scale'):
         seg.setdefault('clip', {})['scale'] = dict(x=o['scale'], y=o['scale'])
     if o.get('style') or P.get('cap_style'):
-        style_caption(seg, dict(P.get('cap_style') or {}, **(o.get('style') or {})))
+        cs = dict(P.get('cap_style') or {}, **(o.get('style') or {}))
+        style_caption(seg, cs)
+        if cs.get('box'):
+            apply_box(text_mat(seg), cs['box'])
     if o.get('fade'):
         seg['common_keyframes'] = fade_kf(0, C.us(o['dur']), *o['fade'])
 
@@ -210,12 +234,23 @@ for bg in P.get('bgm', []):
     st = seg_starts[bg['from_label']]
     en = seg_starts[bg['to_label']] if bg.get('to_label') else total
     s0, tt = float(bg.get('from', 0.0)), st
+    chunks = []
     while en - tt > 0.05:
         du = min(fdur - s0, en - tt)
-        b.put_audio(b.free_track('BGM', 'audio', C.us(tt), C.us(du)), f, C.us(tt), C.us(du), C.us(s0),
-                    round(10 ** (float(bg.get('db', -32)) / 20), 4))
+        b.mats.pop((f.as_posix(), 'audio'), None)
+        chunks.append(b.put_audio(b.free_track('BGM', 'audio', C.us(tt), C.us(du)), f, C.us(tt), C.us(du), C.us(s0),
+                                  round(10 ** (float(bg.get('db', -32)) / 20), 4)))
         tt += du
         s0 = 0.0
+    # fade the music in where the scene starts and out where it ends (CapCut audio_fades)
+    fin, fout = C.us(float(bg.get('fade_in', 1.5))), C.us(float(bg.get('fade_out', 2.0)))
+    for k, seg in enumerate(chunks):
+        a_in = fin if k == 0 else 0
+        a_out = fout if k == len(chunks) - 1 else 0
+        if a_in or a_out:
+            fm = dict(id=CB.uid(), fade_in_duration=a_in, fade_out_duration=a_out, fade_type=0, type='audio_fade')
+            D['materials'].setdefault('audio_fades', []).append(fm)
+            seg['extra_material_refs'].append(fm['id'])
     bgm_files.add(f)
 
 sfx_files = set()
@@ -227,6 +262,7 @@ for x in sorted(sfx_all, key=lambda x: x['at']):
     if du <= 0.02:
         continue
     st_us = C.us(x['at'])
+    b.mats.pop((f.as_posix(), 'audio'), None)
     b.put_audio(b.free_track('효과음', 'audio', st_us, C.us(du)), f, st_us, C.us(du), 0, round(10 ** (x['db'] / 20), 4))
     sfx_files.add(f)
     x['at'] = round(x['at'], 3)
