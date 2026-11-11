@@ -194,6 +194,24 @@ def style_caption(seg, cs):
                               width=sw)]
         if cs.get('font'):
             st['font'] = dict(path=Path(cs['font']).as_posix(), id='')
+    # accent: some characters in another color, e.g. {"chars": "[]", "color": [1, 0.29, 0.17]} → "[" "]" coloured
+    acc = cs.get('accent')
+    if acc and c['styles']:
+        base, text, runs = c['styles'][0], c['text'], []
+        for i, ch in enumerate(text):        # Korean/ASCII are 1 UTF-16 unit each
+            on = ch in acc['chars']
+            if runs and runs[-1][0] == on:
+                runs[-1][2] = i + 1
+            else:
+                runs.append([on, i, i + 1])
+        styles = []
+        for on, a, z in runs:
+            st = copy.deepcopy(base)
+            st['range'] = [a, z]
+            if on:
+                st['fill'] = dict(alpha=1.0, content=dict(render_type='solid', solid=dict(alpha=1.0, color=acc['color'])))
+            styles.append(st)
+        c['styles'] = styles
     m['content'] = json.dumps(c, ensure_ascii=False)
     m.update(text_color=hexcol(fill), border_color=hexcol(stroke), border_width=sw, border_alpha=1.0,
              use_effect_default_color=False, check_flag=m.get('check_flag', 7) | 8)
