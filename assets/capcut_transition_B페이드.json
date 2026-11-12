@@ -1,0 +1,21 @@
+{
+ "id": "FFECBC6D-53AB-4c9e-B4E3-775DE08D7889",
+ "type": "transition",
+ "name": "B 페이드",
+ "effect_id": "6724239388189921806",
+ "resource_id": "6724239388189921806",
+ "third_resource_id": "6724239388189921806",
+ "source_platform": 1,
+ "sub_type": 0,
+ "adjust_params": [],
+ "path": "C:/Users/123/AppData/Local/CapCut/User Data/Cache/effect/6724239388189921806/3bca53e9f3dfa2c184fbee96438ea097",
+ "duration": 466666,
+ "is_overlap": false,
+ "platform": "all",
+ "category_id": "2037709434",
+ "category_name": "기본형",
+ "request_id": "20261110173213F949538492823F060868",
+ "is_ai_transition": false,
+ "video_path": "",
+ "task_id": ""
+}
