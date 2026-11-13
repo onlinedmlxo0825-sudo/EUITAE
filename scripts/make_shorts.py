@@ -161,45 +161,74 @@ def draw_brand():
     im = layer()
     d = ImageDraw.Draw(im)
     f = ImageFont.truetype(GOTH, 60)
-    cy = VID_Y + VID_H + 92
+    cy = VID_Y + VID_H + 150                     # lowered (user: "조금만 더 내리면")
     tw = f.getlength('의태')
     ih, gap = 50, 18
     iw = ih * 1.42
     x0 = W / 2 - (tw + gap + iw) / 2
     d.text((x0, cy), '의태', font=f, fill=(255, 255, 255), anchor='lm')
     ix = x0 + tw + gap
-    d.rounded_rectangle([ix, cy - ih / 2, ix + iw, cy + ih / 2], radius=ih * 0.28, fill=(255, 0, 0))
+    # white icon with a black play triangle (monochrome, matches the white text)
+    d.rounded_rectangle([ix, cy - ih / 2, ix + iw, cy + ih / 2], radius=ih * 0.28, fill=(255, 255, 255))
     th = ih * 0.42
     tx = ix + iw / 2 - th * 0.36
-    d.polygon([(tx, cy - th / 2), (tx, cy + th / 2), (tx + th * 0.87, cy)], fill=(255, 255, 255))
+    d.polygon([(tx, cy - th / 2), (tx, cy + th / 2), (tx + th * 0.87, cy)], fill=(0, 0, 0))
     ft = ImageFont.truetype(str(ROOT / 'fonts' / 'GothicA1-Bold.ttf'), 34)
     d.text((W / 2, cy + 64), '헬스인의 단백질 자급자족', font=ft, fill=(190, 190, 190), anchor='mm')
     return im
 
 
+def brand_right():
+    """x of the right edge of the '의태 + logo' group (same math as draw_brand)."""
+    tw = ImageFont.truetype(GOTH, 60).getlength('의태')
+    return W / 2 + (tw + 18 + 50 * 1.42) / 2
+
+
 def draw_cta():
-    """Last 2 seconds: '구독 꾹 👇' pill pointing down at the Shorts UI subscribe button."""
+    """Last 2 seconds: '구독 꾹 👇' pill right of the YouTube logo, same row (white pill, black text)."""
     im = layer()
     d = ImageDraw.Draw(im)
-    f = ImageFont.truetype(GOTH, 46)
-    fe = ImageFont.truetype('C:/Windows/Fonts/seguiemj.ttf', 44)
+    f = ImageFont.truetype(GOTH, 38)
+    fe = ImageFont.truetype('C:/Windows/Fonts/seguiemj.ttf', 36)
     label = '구독 꾹 '
-    tw, ew = f.getlength(label), 52
-    cy = VID_Y + VID_H + 252
-    x0 = W / 2 - (tw + ew) / 2
-    d.rounded_rectangle([x0 - 34, cy - 40, x0 + tw + ew + 34, cy + 40], radius=40, fill=(255, 0, 0))
-    d.text((x0, cy + 2), label, font=f, fill=(255, 255, 255), anchor='lm')
+    tw, ew = f.getlength(label), 42
+    cy = VID_Y + VID_H + 150
+    x0 = brand_right() + 30 + 26
+    # toned down to match the white logo: white pill, black text
+    d.rounded_rectangle([x0 - 26, cy - 32, x0 + tw + ew + 22, cy + 32], radius=32, fill=(255, 255, 255))
+    d.text((x0, cy + 2), label, font=f, fill=(0, 0, 0), anchor='lm')
     d.text((x0 + tw, cy + 4), '👇', font=fe, anchor='lm', embedded_color=True)
     return im
 
 
 def build(spec):
     name = spec['name']
-    t0, t1 = spec['range']
-    dur = t1 - t0
     work = TMP / name
     work.mkdir(parents=True, exist_ok=True)
-    vids, auds, txts = collect(t0, t1)
+    # one range, or several ranges joined back to back ("ranges": [[a, b], [c, d]])
+    vids, auds, txts, dur = [], [], [], 0.0
+    parts_spec = spec.get('parts') or [{'range': r} for r in (spec.get('ranges') or [spec['range']])]
+    for part in parts_spec:
+        if 'range' in part:                          # a stretch of the finished edit
+            t0, t1 = part['range']
+            v, au, tx = collect(t0, t1)
+            plen = t1 - t0
+        else:                                        # a raw source clip that isn't in the edit
+            plen = part['out'] - part['in']
+            v = [dict(file=part['file'], photo=False, src=part['in'], dur=plen, at=0.0, vol=part.get('vol', 1.0))]
+            au = []
+            if 'bgm_from' in part:                   # borrow the edit's music/SFX from a timeline spot
+                _, au, _ = collect(part['bgm_from'], part['bgm_from'] + plen)
+            tx = [dict(kind='sub', text=s['text'], at=s['at'], dur=s['dur']) for s in part.get('subs', [])]
+        for x in v + au + tx:
+            x['at'] += dur
+        for x in au:
+            if x['fo_at'] is not None:
+                x['fo_at'] += dur
+        vids += v; auds += au; txts += tx
+        dur += plen
+    for e in spec.get('extra_texts', []):          # captions that live outside the chosen ranges
+        txts.append(dict(kind=e.get('kind', 'note'), text=e['text'], at=float(e['at']), dur=float(e['dur'])))
 
     # 1) base 16:9 video with clip audio
     parts = []
@@ -270,7 +299,8 @@ def build(spec):
         vf.append(chain)
         mix.append(f'[a{k}]')
     vf.append(''.join(mix) + f'amix=inputs={len(mix)}:normalize=0:duration=first,'
-              f'afade=t=in:st=0:d=0.15,afade=t=out:st={dur - 0.3:.3f}:d=0.3[aout]')
+              f'afade=t=in:st=0:d=0.15,afade=t=out:st={dur - 0.3:.3f}:d=0.3'
+              + (',loudnorm=I=-15:TP=-1.5:LRA=11,aresample=48000' if spec.get('loudnorm', True) else '') + '[aout]')
     out = OUT / f'{name}.mp4'
     run(args + ['-filter_complex', ';'.join(vf), '-map', f'[{last}]', '-map', '[aout]', '-t', f'{dur:.3f}',
                 '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p', '-r', '30',
